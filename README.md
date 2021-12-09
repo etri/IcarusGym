@@ -36,14 +36,14 @@ We present three gym-type environments as usage examples of IcarusGym:
 - DecisionArrayCache
     - Implemented based on the following reference: 
         - A. Sadeghi et al., "Deep reinforcement learning for adaptive caching in hierarchical content delivery 
-        networks," IEEE Trans. Cogn. Commun. Netw., vol. 5, no. 4, pp. 1024-1033, Dec. 2019.
+        networks," *IEEE Trans. Cogn. Commun. Netw.*, vol. 5, no. 4, pp. 1024-1033, Dec. 2019.
 - PassiveAgentCache
     - Just observes the actions of a legacy caching algorithms provided by the original Icarus. It is useful when you 
     need to compare the performances of reinforcement learning-based control and legacy control in same scenario.
 - TtlCache
     - Implemented based on the following reference: 
-        - M. Dehghan et al., "A utility optimization approach to network cache design," IEEE/ACM Trans. Netw., vol. 27, 
-        no. 3, pp. 1013-1027, May 2019 (Earlier version is presented in IEEE INFOCOM 2016).
+        - M. Dehghan et al., "A utility optimization approach to network cache design," *IEEE/ACM Trans. Netw.*, vol. 27, 
+        no. 3, pp. 1013-1027, May 2019 (Earlier version is presented in *IEEE INFOCOM 2016*).
 
 ## Acknowledgement
 
