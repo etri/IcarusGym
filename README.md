@@ -38,7 +38,7 @@ We present three gym-type environments as usage examples of IcarusGym:
         - A. Sadeghi et al., "Deep reinforcement learning for adaptive caching in hierarchical content delivery 
         networks," *IEEE Trans. Cogn. Commun. Netw.*, vol. 5, no. 4, pp. 1024-1033, Dec. 2019.
 - PassiveAgentCache
-    - Just observes the actions of a legacy caching algorithms provided by the original Icarus. It is useful when you 
+    - Just observes the actions of legacy caching algorithms provided by the original Icarus. It is useful when you 
     need to compare the performances of reinforcement learning-based control and legacy control in same scenario.
 - TtlCache
     - Implemented based on the following reference: 
