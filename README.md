@@ -1,6 +1,6 @@
 # IcarusGym
 
-IcarusGym is an agent-oriented information-centric (ICN) network caching simulator based on 
+IcarusGym is an agent-oriented information-centric network (ICN) caching simulator based on 
 [Icarus](https://icarus-sim.github.io) and [OpenAI Gym](https://gym.openai.com/). 
 
 It is designed for users who want to apply reinforcement learning (RL) in researches on ICN caching. 
