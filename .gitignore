@@ -1,0 +1,77 @@
+# 시각적 구조 안내 주석
+# ┌──────────────────────────
+# │ Python 일반 설정
+# └──────────────────────────
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C 확장 / 공유 오브젝트
+*.so
+*.dylib
+*.dll
+
+# 패키지 빌드 아티팩트
+build/
+dist/
+*.egg-info/
+*.eggs/
+.egg
+pip-wheel-metadata/
+
+# venv / 가상환경
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# 테스트, 노트북, 캐시
+.ipynb_checkpoints/
+*.ipynb
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# 로그 파일
+*.log
+logs/
+
+# 환경 변수
+.env
+.env.*
+
+# IDE / 에디터 관련 설정
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.sw?
+*~
+.DS_Store
+
+# macOS
+.DS_Store
+
+# Visual Studio Code
+.vscode/
+
+# JetBrains (PyCharm 등)
+.idea/
+
+# Jupyter Notebook 체크포인트
+.ipynb_checkpoints/
+
+# 배포용 메타
+*.manifest
+*.spec
+
