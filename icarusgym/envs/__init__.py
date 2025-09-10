@@ -3,7 +3,7 @@
 """Package that includes the gym-type environments provided by IcarusGym.
 """
 
-import gym
+import gymnasium as gym
 
 from .decision_array_cache import DecisionArrayCache
 from .gym_env_base import GymEnvBase

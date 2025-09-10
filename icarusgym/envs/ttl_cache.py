@@ -6,30 +6,33 @@ M. Dehghan et al., "A utility optimization approach to network cache design," IE
 pp. 1013-1027, May 2019 (Earlier version of the paper is presented in IEEE INFOCOM 2016).
 """
 
+from typing import Optional
 import numpy as np
 
+import gymnasium
 from icarusgym.envs.gym_env_base import GymEnvBase
-from gym.spaces import Discrete, Box, Tuple
+from gymnasium.spaces import Discrete, Box, Tuple
 
 
 class TtlCache(GymEnvBase):
     """Class that defines the observation and action spaces of gym-type TtlCache environment.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, config: Optional[dict] = None):
         """Constructor.
 
         :param kwargs: Dictionary of keyword arguments.
         """
-        super().__init__(**kwargs)
+        print("###config",config)
+        super().__init__(config)
 
     @staticmethod
-    def build_obs_space(**kwargs):
+    def build_obs_space(kwargs: Optional[dict] = None) -> gymnasium.Space:
         """Builds observation space.
 
         :param kwargs: Dictionary of keyword arguments.
         :return: Observation space.
         """
-        config = kwargs['config']
+        config = kwargs
         content_max = config['content_max']
         ttl_max = config['ttl_max']
 
@@ -37,19 +40,19 @@ class TtlCache(GymEnvBase):
         # is the current time of caching simulation. 'content' is the ID of requested content. 'remaining_ttl' is the
         # remaining time until when the requested is removed. 'hit' becomes 1 when the requested content is hit in the
         # cache, 0 for the case of cache miss.
-        return Tuple((Box(low=0., high=np.inf, shape=(1,), dtype=np.float),
-                      Box(low=0, high=content_max, shape=(1,), dtype=np.uint32),
-                      Box(low=0., high=ttl_max, shape=(1,), dtype=np.float),
+        return Tuple((Box(low=0., high=np.inf, shape=(1,), dtype=np.float64),
+                      Box(low=0, high=content_max, shape=(1,), dtype=np.int_),
+                      Box(low=0., high=ttl_max, shape=(1,), dtype=np.float64),
                       Discrete(2)))
 
     @staticmethod
-    def build_action_space(**kwargs):
+    def build_action_space(kwargs: Optional[dict] = None) -> gymnasium.Space:
         """Builds observation space.
 
         :param kwargs: Dictionary of keyword arguments.
         :return: Observation space.
         """
-        config = kwargs['config']
+        config = kwargs
         ttl_max = config['ttl_max']
         cache_size_max = config['cache_size_max']
 
@@ -57,5 +60,5 @@ class TtlCache(GymEnvBase):
         # the requested content is stored in the cache. 'cache_size' is the size of cache. When the cache size becomes
         # lower than the number of cached contents at the previous time-step, the cache evicts the contents with the
         # most lowest remaining TTLs.
-        return Tuple((Box(low=0, high=ttl_max, shape=(1,), dtype=np.float),
-                      Box(low=0, high=cache_size_max, shape=(1,), dtype=np.uint32)))
+        return Tuple((Box(low=0, high=ttl_max, shape=(1,), dtype=np.float64),
+                      Box(low=0, high=cache_size_max, shape=(1,), dtype=np.int_)))

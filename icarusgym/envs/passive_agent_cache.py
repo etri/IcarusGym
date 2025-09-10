@@ -9,8 +9,9 @@ control and legacy control in same scenario.
 
 import numpy as np
 
+import gymnasium as gym
 from icarusgym.envs.gym_env_base import GymEnvBase
-from gym.spaces import Discrete, Box, Tuple
+from gymnasium.spaces import Discrete, Box, Tuple
 
 
 class PassiveAgentCache(GymEnvBase):

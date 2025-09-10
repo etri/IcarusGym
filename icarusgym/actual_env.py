@@ -3,6 +3,7 @@
 """Module that ports the main control loop of Icarus to Gym through GymProxy.
 """
 
+from typing import Optional
 import collections
 import copy
 import functools
@@ -13,7 +14,7 @@ import sys
 import time
 import traceback
 
-from gymproxy import BaseActualEnv
+from gymproxy import ActualEnv
 from icarus.execution import NetworkModel, NetworkView, NetworkController, CollectorProxy
 from icarus.orchestration import Orchestrator
 from icarus.registry import CACHE_POLICY, CACHE_PLACEMENT, CONTENT_PLACEMENT, DATA_COLLECTOR, RESULTS_WRITER, \
@@ -25,19 +26,25 @@ from icarus.util import config_logging, timestr, Settings
 logger = logging.getLogger('icarusgym_actual_env')  # Setting the logger.
 
 
-class IcarusActualEnv(BaseActualEnv, Orchestrator):
+class IcarusActualEnv(ActualEnv, Orchestrator):
     """External environment class that is inherited from BaseActualEnv class of GymProxy.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, kwargs: Optional[dict] = None):
         """Constructor that prepares an execution of Icarus simulation.
 
         :param kwargs: Dictionary of keyword arguments.
         """
+        print("@@@@kwargs",kwargs)
         env_proxy = kwargs['env_proxy']
-        BaseActualEnv.__init__(self, env_proxy)
-        config = kwargs['config']
-        config_file = config['config_path']
-        output = config['output_path']
+        ActualEnv.__init__(self, env_proxy)
+        config = kwargs.get('kwargs') or kwargs
+        print("ACTUAL_ENV config", config)
+        config_file = config.get('config_path') if config else None
+        if config_file and not os.path.isabs(config_file):
+            # Convert relative path to absolute path
+            config_file = os.path.abspath(config_file)
+        print("CONFIG_PATH", config_file)
+        output = kwargs.get('kwargs', {}).get('output_path') or kwargs.get('output_path')
         config_override = None
         settings = Settings()
         settings.read_from(config_file)
@@ -73,17 +80,32 @@ class IcarusActualEnv(BaseActualEnv, Orchestrator):
         while queue:
             self._experiments.append(queue.popleft())
         self._output = output
+        print("@@@@END")
 
-    def run(self, **kwargs):
+    def run(self, seed_:int, kwargs: Optional[dict] = None):
         """Runs the main control loop of Icarus simulation.
 
         :param kwargs: Dictionary of keyword argument.
         """
-        i = int(self.seq.current() / self.settings.N_REPLICATIONS) % len(self._experiments)
-        experiment = self._experiments[i]
-        self.experiment_callback(run_scenario(self.settings, experiment, self.seq.assign(), self.n_exp))
-        if self._stop:
-            self.stop()
+        logger.info('Run started!')
+        print("RUN hello")
+        # i = int(self.seq.current() / self.settings.N_REPLICATIONS) % len(self._experiments)
+        # experiment = self._experiments[i]
+        # self.experiment_callback(run_scenario(self.settings, experiment, self.seq.assign(), self.n_exp))
+        # if self._stop:
+        #     self.stop()
+        print("RUN hello 1")
+        print("num_steps:", kwargs)
+               
+        import numpy as np
+        _obs = np.zeros((5, 11), dtype=np.int32)  # 더미 observation
+        _info = {}  # 더미 info
+        terminated = False
+        truncated = False
+        reward = 0
+        
+        print("RUN hello2:", seed_)
+        IcarusActualEnv.set_obs_and_reward(_obs, reward, terminated, truncated, _info)
 
     def finish(self, **kwargs):
         """Finishes an execution of Icarus simulation.
@@ -93,6 +115,7 @@ class IcarusActualEnv(BaseActualEnv, Orchestrator):
         logger.info('END | Planned: %d, Completed: %d, Succeeded: %d, Failed: %d',
                     self.n_exp, self.n_fail + self.n_success, self.n_success, self.n_fail)
         logger.info('Orchestrator finished')
+        logger.info('Orchestrator finished labry!!!')
         orch = self
         settings = self.settings
         output = self._output
@@ -238,7 +261,7 @@ def exec_experiment(topology, workload, netconf, strategy, cache_policy, collect
                 logger.info('Terminating IcarusGym.')
             else:
                 logger.error(traceback.format_exc())
-            BaseActualEnv.env_proxy.release_lock()
-            BaseActualEnv.env_proxy.set_gym_env_event()
+            ActualEnv.env_proxy.release_lock()
+            ActualEnv.env_proxy.set_gym_env_event()
             exit(1)
     return collector.results()

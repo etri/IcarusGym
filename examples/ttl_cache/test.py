@@ -20,34 +20,44 @@ logger = logging.getLogger('main')
 
 
 def main():
+    print("test 1")
     """Main routine for testing the TTL cache environment.
     """
     config = {'config_path': conf.CONFIG_PATH,
               'output_path': conf.OUTPUT_PATH,
               'content_max': conf.CONTENT_MAX,
               'ttl_max': conf.TTL_MAX,
-              'cache_size_max': int(conf.N_CONTENTS * conf.CACHE_RATIO)}
+              'cache_size_max': int(conf.N_CONTENTS * conf.CACHE_RATIO),
+              'workload_n_measured': conf.WORKLOAD_N_MEASURED}
+
     env = gym.make(id='TtlCache-v0', config=config)
+    print("test 2")
     for i in range(0, conf.NUM_EPISODES):
         j = 0
-        _ = env.reset()
+        obs, info = env.reset(seed=i, options=config)
+        print("test 3")
+
         while True:
-            env.render()
+            # env.render()
+            print("test 4")
+
 
             # FIFO cache with the TTL value of 16.0s for every content.
             action = (np.array([16.], dtype=np.float), np.array([conf.N_CONTENTS * conf.CACHE_RATIO], dtype=np.uint32))
 
             # For more details of obs and action, refer icarusgym.envs.ttl_cache module.
-            obs, reward, done, info = env.step(action)
+            obs, reward, terminated, truncated, info = env.step(action)
+            print("test 5")
 
-            log_step(i, j, obs, reward, done, info, action)
+            log_step(i, j, obs, reward, terminated, truncated, info, action)
+            print("test 6")
             j = j + 1
-            if done:
+            if terminated:
                 break
     env.close()
 
 
-def log_step(episode: int, step: int, obs: tuple, reward: float, done: bool, info: dict, action: tuple):
+def log_step(episode: int, step: int, obs: tuple, reward: float, terminated: bool, truncated: bool, info: dict, action: tuple):
     """Utility function for printing logs.
 
     :param episode: Current episode number.
@@ -65,12 +75,13 @@ def log_step(episode: int, step: int, obs: tuple, reward: float, done: bool, inf
     step_str = '{}-th step in {}-th episode \n'.format(step, episode)
     obs_str = 'obs: {} \n'.format((env_time, cid, remaining_time, hit))
     reward_str = 'reward: {} \n'.format(reward)
-    done_str = 'done: {} \n'.format(done)
+    terminated_str = 'terminated: {} \n'.format(terminated)
+    truncated_str = 'truncated: {} \n'.format(truncated)
     info_str = 'info: {} \n'.format(info)
     action_ttl_str = 'action: TTL: {} / '.format(action[0][0])
     action_cache_size_str = 'cache size: {} \n'.format(action[1][0])
     action_str = action_ttl_str + action_cache_size_str
-    result_str = step_str + obs_str + reward_str + done_str + info_str + action_str
+    result_str = step_str + obs_str + reward_str + terminated_str + truncated_str + info_str + action_str
     logger.info(result_str)
 
 

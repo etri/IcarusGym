@@ -13,6 +13,7 @@ import examples.decision_array_cache.config as conf
 import fnss
 import networkx as nx
 import numpy as np
+import os
 
 from icarus.registry import register_topology_factory
 from icarus.scenarios.topology import *
@@ -42,28 +43,37 @@ FIXED_ACTION = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 def main():
     """Main routine for testing decision array cache environment.
     """
-    config = {'config_path': conf.CONFIG_PATH,
+    print("test 1")
+    config = {'config_path': '/home/labry/git/IcarusGym/examples/decision_array_cache/config.py',
               'output_path': conf.OUTPUT_PATH,
               'content_max': conf.CONTENT_MAX,
               'node_max': conf.NODE_MAX,
-              'ttl_max': conf.TTL_MAX}
-    env = gym.make(id='DecisionArrayCache-v0', config=config)
+              'ttl_max': conf.TTL_MAX,
+              'workload_n_measured': conf.WORKLOAD_N_MEASURED}
+
+    print("config", config)
+    env = gym.make(id='DecisionArrayCache-v0', kwargs=config)
     for i in range(0, conf.NUM_EPISODES):
         j = 0
-        _ = env.reset()
+        print("test 2!!")
+        obs, info = env.reset(seed=i, options=config)
+        print("test 3")
         while True:
-            env.render()
+            print("test 4")
+            #env.render()
 
             # For more details of obs and action, refer icarusgym.envs.decision_array_cache module.
             action = FIXED_ACTION
-            obs, reward, done, info = env.step(action)
-
+            obs, reward, terminated, truncated, info = env.step(action)
+            print("test 5")
             # Defensive codes for preventing from logging explosive information when many contents are considered.
             if conf.CONTENT_MAX <= CONTENT_THR and conf.NODE_MAX <= NODE_THR:
-                log_step(i, j, obs, reward, done, info, action)
+                log_step(i, j, obs, reward, terminated, truncated, info, action)
+                #log_step(episode: int, step: int, obs: tuple, reward: float, terminated: bool, truncated: bool, info: dict, action: np.ndarray):
 
             j = j + 1
-            if done:
+            break
+            if terminated:
                 break
     env.close()
 
@@ -80,6 +90,7 @@ def topology_custom(delay: float = 1., **kwargs) -> IcnTopology:
     # Defines a topology that includes 1 content server, 3 cache routers, and 2 client nodes. Node 0 is content server.
     # Node 1 is tier-2 (parent) cache router. Node 2 and 3 are tier-1 (child) cache routers. Node 4 and 5 is connected
     # to node 2 and 3, respectively.
+    print("## topology_custom")
     g = nx.Graph()
     g.add_nodes_from([0, 1, 2, 3, 4, 5])
     g.add_edges_from([(0, 1), (1, 2), (1, 3), (2, 4), (3, 5)])
@@ -111,7 +122,7 @@ def topology_custom(delay: float = 1., **kwargs) -> IcnTopology:
     return IcnTopology(topology)
 
 
-def log_step(episode: int, step: int, obs: tuple, reward: float, done: bool, info: dict, action: np.ndarray):
+def log_step(episode: int, step: int, obs: tuple, reward: float, terminated: bool, truncated: bool, info: dict, action: np.ndarray):
     """Utility function for printing logs.
 
     :param episode: Current episode number.
@@ -125,13 +136,14 @@ def log_step(episode: int, step: int, obs: tuple, reward: float, done: bool, inf
     step_str = '{}-th step in {}-th episode: \n'.format(step, episode)
     obs_str = 'obs: \n{}\n'.format(obs)
     reward_str = 'reward: {} \n'.format(reward)
-    done_str = 'done: {} \n'.format(done)
-    info_hits_str = 'info: hits: \n{}\n'.format(info['hits'])
-    info_misses_str = 'info: misses: \n{}\n'.format(info['misses'])
-    info_fetch_req_str = 'info: fetch_req_overheads: {}\n'.format(info['fetch_req_overheads'])
-    info_fetch_res_str = 'info: fetch_res_overheads: {}\n'.format(info['fetch_res_overheads'])
+    terminated_str = 'terminated: {} \n'.format(terminated)
+    truncated_str = 'truncated: {} \n'.format(truncated)
+    info_hits_str = 'info: hits: \n{}\n'.format(info.get('hits', 'N/A'))
+    info_misses_str = 'info: misses: \n{}\n'.format(info.get('misses', 'N/A'))
+    info_fetch_req_str = 'info: fetch_req_overheads: {}\n'.format(info.get('fetch_req_overheads', 'N/A'))
+    info_fetch_res_str = 'info: fetch_res_overheads: {}\n'.format(info.get('fetch_res_overheads', 'N/A'))
     action_str = 'action: \n{}\n'.format(action)
-    result_str = (step_str + obs_str + reward_str + done_str + info_hits_str + info_misses_str + info_fetch_req_str +
+    result_str = (step_str + obs_str + reward_str + terminated_str + truncated_str + info_hits_str + info_misses_str + info_fetch_req_str +
                   info_fetch_res_str + action_str)
     logger.info(result_str)
 

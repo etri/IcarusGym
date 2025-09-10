@@ -6,12 +6,16 @@ M. Dehghan et al., "A utility optimization approach to network cache design," IE
 pp. 1013-1027, May 2019 (Earlier version of the paper is presented in IEEE INFOCOM 2016).
 """
 
+import os
 import numpy as np
 
 from collections import deque
 from icarus.util import Tree
 
-
+# Get the directory where this script (test.py) is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+# Join that directory path with the config file name
+config_file_path = os.path.join(script_dir, 'config.py')
 # ============================== CONSTANTS FOR MAIN ROUTINE ==============================
 NUM_EPISODES = 1    # Number of episodes to evaluate.
 # ========================================================================================
@@ -19,7 +23,7 @@ NUM_EPISODES = 1    # Number of episodes to evaluate.
 # ============================== CONSTANTS FOR ICARUSGYM ACTUAL ENVIRONMENT ==============================
 N_CONTENTS = 100                # Number of contents.
 WORKLOAD_N_WARM_UP = 0          # Number of sessions during warm-up period of simulation.
-WORKLOAD_N_MEASURED = 3000      # Number of sessions after warm-up period of simulation.
+WORKLOAD_N_MEASURED = 0      # Number of sessions after warm-up period of simulation.
 WORKLOAD_NAME = 'STATIONARY'    # Workload name.
 ALPHA = 1.                      # Alpha parameter.
 BETA = 0.                       # Beta parameter.
@@ -29,7 +33,7 @@ IS_RESET = False                # Whether cache policy is reset or non-reset.
 # ========================================================================================================
 
 # ============================== CONSTANTS FOR ICARUSGYM ENVIRONMENT ==============================
-CONFIG_PATH = 'config.py'                   # Config file name for icarus-sim.
+CONFIG_PATH = config_file_path                   # Config file name for icarus-sim.
 OUTPUT_PATH = 'result.pickle'               # Output file name for icarus-sim.
 TTL_MAX = np.inf                            # Maximum TTL values.
 CONTENT_MAX = N_CONTENTS                    # Maximum content ID.
