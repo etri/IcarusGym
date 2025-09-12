@@ -8,6 +8,7 @@ control and legacy control in same scenario.
 """
 
 import numpy as np
+from typing import Optional
 
 import gymnasium as gym
 from icarusgym.envs.gym_env_base import GymEnvBase
@@ -22,27 +23,27 @@ class PassiveAgentCache(GymEnvBase):
 
         :param kwargs: Dictionary of keyword arguments.
         """
-        super().__init__(**kwargs)
+        super().__init__(kwargs)
 
     @staticmethod
-    def build_obs_space(**kwargs):
+    def build_obs_space(kwargs: Optional[dict] = None)-> Tuple:
         """Builds observation space.
 
         :param kwargs: Dictionary of keyword arguments.
         :return: Observation space.
         """
-        config = kwargs['config']
+        config = kwargs['kwargs']
         content_max = config['content_max']
 
         # An observation is a tuple that consists of three values: env_time, content, hit. 'env_time' is the current
         # time of caching simulation. 'content' is the ID of requested content. 'hit' becomes 1 when the requested
         # content is hit in the cache, 0 for the case of cache miss.
-        return Tuple((Box(low=0., high=np.inf, shape=(1,), dtype=np.float),
+        return Tuple((Box(low=0., high=np.inf, shape=(1,), dtype=np.float64),
                       Box(low=0, high=content_max, shape=(1,), dtype=np.uint32),
                       Discrete(2)))
 
     @staticmethod
-    def build_action_space(**kwargs):
+    def build_action_space(kwargs: Optional[dict] = None) -> Discrete:
         """Builds action space.
 
         :param kwargs: Dictionary of keyword arguments.

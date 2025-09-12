@@ -351,7 +351,7 @@ class PassiveIcarusGymLce(IcarusGymLce):
             :param hit: Whether a requested content is hit in the cache or not.
             :return: An observation is a tuple of two numpy arrays and a boolean variable.
             """
-            return (np.array([self._current_time], dtype=np.float),
+            return (np.array([self._current_time], dtype=np.float64),
                     np.array([content], dtype=np.uint32),
                     1 if hit else 0)
 
@@ -389,11 +389,12 @@ class PassiveIcarusGymLce(IcarusGymLce):
         def finish(self):
             """Delivers an end-of-episode signal to the agent through method IcarusActualEnv.set_obs_and_reward().
             """
-            obs = (np.array([np.infty], dtype=np.float), np.array([0], dtype=np.uint32), 0)
+            obs = (np.array([np.inf], dtype=np.float64), np.array([0], dtype=np.uint32), 0)
             reward = 0.
-            done = True
+            terminated = True
+            truncated = False
             info = self.get_info()
-            IcarusActualEnv.set_obs_and_reward(obs, reward, done, info)
+            IcarusActualEnv.set_obs_and_reward(obs, reward, terminated, truncated, info)
 
     @inheritdoc(IcarusGymLce)
     def __init__(self, view: NetworkView, controller: NetworkController, content_max: int,
@@ -444,9 +445,10 @@ class PassiveIcarusGymLce(IcarusGymLce):
             hit = c_get(content, *args, **kwargs)
             obs = cache.get_obs(content, hit)
             reward = cache.__class__.get_reward(hit)
-            done = False
+            terminated = False
+            truncated = False
             info = cache.get_info(content)
-            IcarusActualEnv.get_action(obs, reward, done, info)
+            IcarusActualEnv.get_action(obs, reward, terminated, truncated, info)
             return hit
 
         cache.get = get

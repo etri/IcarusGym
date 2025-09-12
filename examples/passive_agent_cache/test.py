@@ -26,32 +26,33 @@ def main():
               'output_path': conf.OUTPUT_PATH,
               'content_max': conf.CONTENT_MAX,
               'ttl_max': conf.TTL_MAX}
-    env = gym.make(id='PassiveAgentCache-v0', config=config)
+    env = gym.make(id='PassiveAgentCache-v0', kwargs=config)
     for i in range(0, conf.NUM_EPISODES):
         j = 0
-        _ = env.reset()
+        obs, info = env.reset(seed=i, options=config)
         while True:
-            env.render()
+            # env.render()
 
             # For more details of obs and action, refer icarusgym.envs.passive_agent_cache module.
             action = env.action_space.sample()
-            obs, reward, done, info = env.step(action)
+            obs, reward, terminated, truncated, info = env.step(action)
 
-            log_step(i, j, obs, reward, done, info, action)
+            log_step(i, j, obs, reward, terminated, truncated, info, action)
             j = j + 1
-            if done:
+            if terminated:
                 break
     env.close()
 
 
-def log_step(episode: int, step: int, obs: tuple, reward: float, done: bool, info: dict, action: int):
+def log_step(episode: int, step: int, obs: tuple, reward: float, terminated: bool, truncated: bool, info: dict, action: int):
     """Utility function for printing logs.
 
     :param episode: Current episode number.
     :param step: Current time-step.
     :param obs: Observation from the current environment.
     :param reward: Reward from the current environment.
-    :param done: Indicates whether the current episode ends or not.
+    :param terminated: Indicates whether the current episode ends or not.
+    :param truncated: Indicates whether the current episode is truncated or not.
     :param info: Contains auxiliary diagnostic information (helpful for debugging, and sometimes learning).
     :param action: Action to be given to the current environment.
     """
@@ -61,10 +62,11 @@ def log_step(episode: int, step: int, obs: tuple, reward: float, done: bool, inf
     step_str = '{}-th step in {}-th episode \n'.format(step, episode)
     obs_str = 'obs: {} \n'.format((env_time, cid, hit))
     reward_str = 'reward: {} \n'.format(reward)
-    done_str = 'done: {} \n'.format(done)
+    terminated_str = 'terminated: {} \n'.format(terminated)
+    truncated_str = 'truncated: {} \n'.format(truncated)
     info_str = 'info: {} \n'.format(info)
     action_str = 'action: {}\n'.format(action)
-    result_str = step_str + obs_str + reward_str + done_str + info_str + action_str
+    result_str = step_str + obs_str + reward_str + terminated_str + truncated_str + info_str + action_str
     logger.info(result_str)
 
 

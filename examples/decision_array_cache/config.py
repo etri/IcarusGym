@@ -10,6 +10,7 @@ observation and information. It may be not difficult.
 """
 
 import numpy as np
+from pathlib import Path
 
 from collections import deque
 from icarus.util import Tree
@@ -31,8 +32,9 @@ CACHE_RATIO = 1.0               # Ratio of cache per number of contents.
 # ========================================================================================================
 
 # ============================== CONSTANTS FOR ICARUSGYM ENVIRONMENT ==============================
-CONFIG_PATH = 'config.py'                   # Config file name for icarus-sim.
-OUTPUT_PATH = '/home/labry/git/IcarusGym/result.pickle'               # Output file name for icarus-sim.
+# Config file path for icarus-sim (absolute path)
+CONFIG_PATH = str(Path(__file__).parent / 'config.py')
+OUTPUT_PATH = str(Path(__file__).parent / 'result.pickle')               # Output file name for icarus-sim.
 TTL_MAX = np.inf                            # Maximum TTL values.
 CONTENT_MAX = N_CONTENTS                    # Maximum content ID.
 NODE_MAX = 4                                # Maximum node ID.
