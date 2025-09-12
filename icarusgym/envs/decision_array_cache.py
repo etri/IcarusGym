@@ -44,7 +44,7 @@ class DecisionArrayCache(GymEnvBase):
         # network for single time-step. Namely, 'requests[n, c] = i' means that the number of requests for content c is
         # i at the cache of node n. If node n is not cache router, requests[n, c] always becomes 0 because node n does
         # not have cache. We use this somewhat wasteful definition due to implementation convenience.
-        return Box(low=0, high=1000, shape=(node_max + 1, content_max + 1), dtype=np.int32)
+        return Box(low=0, high=1000, shape=(node_max + 1, content_max + 1), dtype=np.uint32)
 
     @staticmethod
     def build_action_space(kwargs: Optional[dict] = None) -> Box:
@@ -61,4 +61,4 @@ class DecisionArrayCache(GymEnvBase):
         # or not at a node. Namely, 'decision[n, c] = 1' means that content c is stored at the cache of node n.
         # 'decision[n, i] = 0' means otherwise. If node n is not cache router, 'requests[n, c] = 1' does not effective
         # since node n does not have cache. We use this somewhat wasteful definition due to implementation convenience.
-        return Box(low=0, high=1, shape=(node_max + 1, content_max + 1), dtype=np.int32)
+        return Box(low=0, high=1, shape=(node_max + 1, content_max + 1), dtype=np.uint32)

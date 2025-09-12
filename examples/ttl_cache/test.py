@@ -20,7 +20,6 @@ logger = logging.getLogger('main')
 
 
 def main():
-    print("test 1")
     """Main routine for testing the TTL cache environment.
     """
     config = {'config_path': conf.CONFIG_PATH,
@@ -31,26 +30,22 @@ def main():
               'workload_n_measured': conf.WORKLOAD_N_MEASURED}
 
     env = gym.make(id='TtlCache-v0', config=config)
-    print("test 2")
+    
     for i in range(0, conf.NUM_EPISODES):
         j = 0
         obs, info = env.reset(seed=i, options=config)
-        print("test 3")
 
         while True:
             # env.render()
-            print("test 4")
-
+  
 
             # FIFO cache with the TTL value of 16.0s for every content.
             action = (np.array([16.], dtype=np.float), np.array([conf.N_CONTENTS * conf.CACHE_RATIO], dtype=np.uint32))
 
             # For more details of obs and action, refer icarusgym.envs.ttl_cache module.
             obs, reward, terminated, truncated, info = env.step(action)
-            print("test 5")
 
             log_step(i, j, obs, reward, terminated, truncated, info, action)
-            print("test 6")
             j = j + 1
             if terminated:
                 break

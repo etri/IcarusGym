@@ -80,7 +80,6 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
         while queue:
             self._experiments.append(queue.popleft())
         self._output = output
-        print("@@@@END")
 
     def run(self, seed_:int, kwargs: Optional[dict] = None):
         """Runs the main control loop of Icarus simulation.
@@ -88,13 +87,11 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
         :param kwargs: Dictionary of keyword argument.
         """
         logger.info('Run started!')
-        print("RUN hello")
         # i = int(self.seq.current() / self.settings.N_REPLICATIONS) % len(self._experiments)
         # experiment = self._experiments[i]
         # self.experiment_callback(run_scenario(self.settings, experiment, self.seq.assign(), self.n_exp))
         # if self._stop:
         #     self.stop()
-        print("RUN hello 1")
         print("num_steps:", kwargs)
         try:
             i = int(self.seq.current() / self.settings.N_REPLICATIONS) % len(self._experiments)
@@ -102,11 +99,9 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
             print("Error:", e)
             i = 0   
         # i = int(self.seq.current() / self.settings.N_REPLICATIONS) % 1)
-        print("run 1.5")
         experiment = self._experiments[i]
-        print("run 2")
         self.experiment_callback(run_scenario(self.settings, experiment, self.seq.assign(), self.n_exp))
-        print("run 3")
+
         if self._stop:
             self.stop()
                
@@ -128,7 +123,6 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
         logger.info('END | Planned: %d, Completed: %d, Succeeded: %d, Failed: %d',
                     self.n_exp, self.n_fail + self.n_success, self.n_success, self.n_fail)
         logger.info('Orchestrator finished')
-        logger.info('Orchestrator finished labry!!!')
         orch = self
         settings = self.settings
         output = self._output

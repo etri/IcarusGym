@@ -43,7 +43,6 @@ FIXED_ACTION = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 def main():
     """Main routine for testing decision array cache environment.
     """
-    print("test 1")
     config = {'config_path': '/home/labry/git/IcarusGym/examples/decision_array_cache/config.py',
               'output_path': conf.OUTPUT_PATH,
               'content_max': conf.CONTENT_MAX,
@@ -55,17 +54,13 @@ def main():
     env = gym.make(id='DecisionArrayCache-v0', kwargs=config)
     for i in range(0, conf.NUM_EPISODES):
         j = 0
-        print("test 2!!")
         obs, info = env.reset(seed=i, options=config)
-        print("test 3")
         while True:
-            print("test 4")
             #env.render()
 
             # For more details of obs and action, refer icarusgym.envs.decision_array_cache module.
             action = FIXED_ACTION
             obs, reward, terminated, truncated, info = env.step(action)
-            print("test 5")
             # Defensive codes for preventing from logging explosive information when many contents are considered.
             if conf.CONTENT_MAX <= CONTENT_THR and conf.NODE_MAX <= NODE_THR:
                 log_step(i, j, obs, reward, terminated, truncated, info, action)
