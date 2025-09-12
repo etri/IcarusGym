@@ -152,7 +152,7 @@ class TtlCache(Cache):
     def node(self, node):
         self._node = node
 
-    def dump(self) -> List[Tuple[int, float, float, int]]:
+    def dump(self) -> list[Tuple[int, float, float, int]]:
         """Returns a dump of all the elements currently in the cache possibly sorted according to content ID.
 
         :return List of tuples, each of which consists of four values: content, popularity, expiration_time, and TTL.
@@ -188,9 +188,10 @@ class TtlCache(Cache):
         # Gets the TTL and cache size decision for the content from the agent.
         obs = self.get_obs(content, remaining_ttl, hit)
         reward = self.get_reward(hit)
-        done = False
+        terminated = False
+        truncated = False
         info = self.get_info(content)
-        action = IcarusActualEnv.get_action(obs, reward, done, info)
+        action = IcarusActualEnv.get_action(obs, reward, terminated, truncated, info)
         ttl = action[0][0]
         cache_size = action[1][0]
         self._ttls[content] = ttl
@@ -312,9 +313,9 @@ class TtlCache(Cache):
         # is the current time of caching simulation. 'content' is the ID of requested content. 'remaining_ttl' is the
         # remaining time until when the requested is removed. 'hit' becomes 1 when the requested content is hit in the
         # cache, 0 for the case of cache miss.
-        return (np.array([self._current_time], dtype=np.float),
+        return (np.array([self._current_time], dtype=np.float64),
                 np.array([content], dtype=np.uint32),
-                np.array([remaining_ttl], dtype=np.float),
+                np.array([remaining_ttl], dtype=np.float64),
                 1 if hit else 0)
 
     @staticmethod
@@ -348,12 +349,13 @@ class TtlCache(Cache):
         """Signals the end of an episode.
         """
         # Meaningless observation and reward.
-        obs = (np.array([0.0], dtype=np.float), np.array([0], dtype=np.uint32), np.array([0.], dtype=np.float), 0)
+        obs = (np.array([0.0], dtype=np.float64), np.array([0], dtype=np.uint32), np.array([0.], dtype=np.float64), 0)
         reward = 0.
 
-        done = True             # Indicates the end of episode.
+        terminated = True             # Indicates the end of episode.
+        truncated = False
         info = self.get_info()  # Valid information dictionary.
-        IcarusActualEnv.set_obs_and_reward(obs, reward, done, info)
+        IcarusActualEnv.set_obs_and_reward(obs, reward, terminated, truncated, info)
 
 
 @register_cache_policy('ICARUSGYM_DECISION_ARRAY')

@@ -26,7 +26,7 @@ class TtlCache(GymEnvBase):
         super().__init__(config)
 
     @staticmethod
-    def build_obs_space(kwargs: Optional[dict] = None) -> gymnasium.Space:
+    def build_obs_space(kwargs: Optional[dict] = None) -> Tuple:
         """Builds observation space.
 
         :param kwargs: Dictionary of keyword arguments.
@@ -46,7 +46,7 @@ class TtlCache(GymEnvBase):
                       Discrete(2)))
 
     @staticmethod
-    def build_action_space(kwargs: Optional[dict] = None) -> gymnasium.Space:
+    def build_action_space(kwargs: Optional[dict] = None) -> Tuple:
         """Builds observation space.
 
         :param kwargs: Dictionary of keyword arguments.

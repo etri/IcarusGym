@@ -30,29 +30,26 @@ def main():
               'workload_n_measured': conf.WORKLOAD_N_MEASURED}
 
     env = gym.make(id='TtlCache-v0', config=config)
-    
     for i in range(0, conf.NUM_EPISODES):
         j = 0
         obs, info = env.reset(seed=i, options=config)
-
         while True:
             # env.render()
   
-
             # FIFO cache with the TTL value of 16.0s for every content.
-            action = (np.array([16.], dtype=np.float), np.array([conf.N_CONTENTS * conf.CACHE_RATIO], dtype=np.uint32))
+            action = (np.array([16.], dtype=np.float64), np.array([conf.N_CONTENTS * conf.CACHE_RATIO], dtype=np.uint32))
 
             # For more details of obs and action, refer icarusgym.envs.ttl_cache module.
             obs, reward, terminated, truncated, info = env.step(action)
-
             log_step(i, j, obs, reward, terminated, truncated, info, action)
             j = j + 1
             if terminated:
                 break
+
     env.close()
 
 
-def log_step(episode: int, step: int, obs: tuple, reward: float, terminated: bool, truncated: bool, info: dict, action: tuple):
+def log_step(episode: int, step: int, obs: tuple, reward: np.float64, terminated: bool, truncated: bool, info: dict, action: tuple):
     """Utility function for printing logs.
 
     :param episode: Current episode number.
