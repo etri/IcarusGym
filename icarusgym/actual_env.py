@@ -96,16 +96,29 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
         #     self.stop()
         print("RUN hello 1")
         print("num_steps:", kwargs)
+        try:
+            i = int(self.seq.current() / self.settings.N_REPLICATIONS) % len(self._experiments)
+        except Exception as e:
+            print("Error:", e)
+            i = 0   
+        # i = int(self.seq.current() / self.settings.N_REPLICATIONS) % 1)
+        print("run 1.5")
+        experiment = self._experiments[i]
+        print("run 2")
+        self.experiment_callback(run_scenario(self.settings, experiment, self.seq.assign(), self.n_exp))
+        print("run 3")
+        if self._stop:
+            self.stop()
                
-        import numpy as np
-        _obs = np.zeros((5, 11), dtype=np.int32)  # 더미 observation
-        _info = {}  # 더미 info
-        terminated = False
-        truncated = False
-        reward = 0
+        # import numpy as np
+        # _obs = np.zeros((5, 11), dtype=np.int32)  # 더미 observation
+        # _info = {}  # 더미 info
+        # terminated = False
+        # truncated = False
+        # reward = 0
         
-        print("RUN hello2:", seed_)
-        IcarusActualEnv.set_obs_and_reward(_obs, reward, terminated, truncated, _info)
+        # print("RUN hello2:", seed_)
+        # IcarusActualEnv.set_obs_and_reward(_obs, reward, terminated, truncated, _info)
 
     def finish(self, **kwargs):
         """Finishes an execution of Icarus simulation.
@@ -137,6 +150,7 @@ def run_scenario(settings, params, curr_exp, n_exp):
         expressing the wall-clock duration of the experiment (in seconds).
     """
     try:
+        logger.info('run_scenario started')
         start_time = time.time()
 
         # Get list of metrics required.

@@ -189,9 +189,10 @@ class PeriodicUpdateEverywhere(Strategy):
         """
         obs = self._get_obs()
         reward = self._get_reward()
-        done = True
+        terminated = True
+        truncated = False
         info = self._get_info()
-        IcarusActualEnv.set_obs_and_reward(obs, reward, done, info)
+        IcarusActualEnv.set_obs_and_reward(obs, reward, terminated, truncated, info)
 
     @inheritdoc(Strategy)
     def process_event(self, time: float, receiver: int, content: int, log: bool):
@@ -203,9 +204,10 @@ class PeriodicUpdateEverywhere(Strategy):
                 int(self._prev_time / self._decision_interval)) >= 1):
             obs = self._get_obs()
             reward = self._get_reward()
-            done = False
+            terminated = False
+            truncated = False
             info = self._get_info()
-            action = IcarusActualEnv.get_action(obs, reward, done, info)    # Gets the decision vector from the agent.
+            action = IcarusActualEnv.get_action(obs, reward, terminated, truncated, info)    # Gets the decision vector from the agent.
             self._caching_decision_array = action
             self._internal_collector.clear()
             self._update_caches()

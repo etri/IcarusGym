@@ -22,7 +22,7 @@ NUM_EPISODES = 1    # Number of episodes to evaluate.
 # ============================== CONSTANTS FOR ICARUSGYM ACTUAL ENVIRONMENT ==============================
 N_CONTENTS = 10                 # Number of contents.
 WORKLOAD_N_WARM_UP = 0          # Number of sessions during warm-up period of simulation.
-WORKLOAD_N_MEASURED = 0      # Number of sessions after warm-up period of simulation.
+WORKLOAD_N_MEASURED = 1      # Number of sessions after warm-up period of simulation.
 WORKLOAD_NAME = 'STATIONARY'    # Workload name.
 ALPHA = 1.                      # Alpha parameter.
 BETA = 0.                       # Beta parameter.
@@ -45,7 +45,7 @@ LOG_LEVEL = 'INFO'  # Output level of logging package.
 PARALLEL_EXECUTION = False
 
 RESULTS_FORMAT = 'PICKLE'               # Format of output file.
-N_REPLICATIONS = 0                      # Number of replicated run of each simulation scenario.
+N_REPLICATIONS = 1                   # Number of replicated run of each simulation scenario.
 CACHING_GRANULARITY = 'OBJECT'
 DATA_COLLECTORS = ['CACHE_HIT_RATIO']   # Specifies data collectors active in simulation.
 # ===============================================================================================================
