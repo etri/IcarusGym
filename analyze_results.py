@@ -173,15 +173,21 @@ def main():
     parser = argparse.ArgumentParser(description='IcarusGym 결과 분석 도구')
     parser.add_argument('pickle_file', nargs='?', default='result.pickle',
                        help='분석할 pickle 파일 경로 (기본: result.pickle)')
-    parser.add_argument('--output-dir', '-o', default='analysis_output',
-                       help='출력 디렉토리 (기본: analysis_output)')
+    parser.add_argument('--output-dir', '-o', default=None,
+                       help='출력 디렉토리 (기본: pickle 파일과 같은 디렉토리의 analysis_output)')
     parser.add_argument('--no-viz', action='store_true',
                        help='시각화 생성 건너뛰기')
     
     args = parser.parse_args()
     
+    # 출력 디렉토리 결정: 지정되지 않은 경우 pickle 파일과 같은 디렉토리에 analysis_output 생성
+    if args.output_dir is None:
+        pickle_path = Path(args.pickle_file)
+        output_dir = pickle_path.parent / 'analysis_output'
+    else:
+        output_dir = Path(args.output_dir)
+    
     # 출력 디렉토리 생성
-    output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
     
     try:

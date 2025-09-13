@@ -19,8 +19,8 @@ NUM_EPISODES = 1    # Number of episodes to evaluate.
 
 # ============================== CONSTANTS FOR ICARUSGYM ACTUAL ENVIRONMENT ==============================
 N_CONTENTS = 100                # Number of contents.
-WORKLOAD_N_WARM_UP = 0          # Number of sessions during warm-up period of simulation.
-WORKLOAD_N_MEASURED = 1      # Number of sessions after warm-up period of simulation.
+WORKLOAD_N_WARM_UP = 1          # Number of sessions during warm-up period of simulation.
+WORKLOAD_N_MEASURED = 10      # Number of sessions after warm-up period of simulation.
 WORKLOAD_NAME = 'STATIONARY'    # Workload name.
 ALPHA = 1.                      # Alpha parameter.
 BETA = 0.                       # Beta parameter.
