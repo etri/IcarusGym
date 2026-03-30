@@ -7,6 +7,7 @@ Icarus are defined in icarus.models.cache.policies module.
 __all__ = ['TtlCache', 'DecisionArrayCache']
 
 import copy
+import logging
 import numpy as np
 
 from icarus.models.cache.policies import Cache
@@ -26,18 +27,21 @@ class TtlCache(Cache):
     class CacheInfo:
         """Class of cache information for constructing TTL cache.
         """
-        def __init__(self, content: int, popularity: int = 0, expiration_time: float = 0.0, ttl: float = 0.0):
+        def __init__(self, content: int, popularity: int = 0, expiration_time: float = 0.0, ttl: float = 0.0,
+                     size: float = 1.0):
             """Constructor.
 
             :param content: Content ID.
             :param popularity: Popularity of content.
             :param expiration_time: Expiration time of content.
             :param ttl: TTL of content.
+            :param size: Size of content in bytes (default 1.0 for backward compatibility).
             """
             self._content = content
             self._popularity = popularity
             self._expiration_time = expiration_time
             self._ttl = ttl
+            self._size = size
 
         def __gt__(self, other):
             """Magic method for comparison of two cache information objects.
@@ -95,6 +99,18 @@ class TtlCache(Cache):
         def expiration_time(self, expiration_time: float):
             self._expiration_time = expiration_time
 
+        @property
+        def size(self) -> float:
+            """Getter for size property.
+
+            :return: Size of content in bytes.
+            """
+            return self._size
+
+        @size.setter
+        def size(self, size: float):
+            self._size = size
+
         @ttl.setter
         def ttl(self, ttl: float):
             self._ttl = ttl
@@ -126,6 +142,21 @@ class TtlCache(Cache):
         self._current_time = 0
         if self._size <= 0:
             raise ValueError('maxlen must be positive')
+
+        # Initialize default weight and size for observations
+        # These values will be passed through the strategy configuration
+        self._default_weight = kwargs.get('default_weight', 1.0)
+        self._default_size = kwargs.get('default_size', 1.0)
+
+        # Size-aware caching: when True, capacity is tracked in bytes instead
+        # of item count.  max_bytes = size * default_size so that the slot-based
+        # semantics are preserved when all contents have default_size.
+        self._size_aware = kwargs.get('size_aware', False)
+        self._current_bytes = 0.0
+        self._max_bytes = float(self._size) * self._default_size if self._size_aware else float('inf')
+        # Per-content size mapping (content_id -> size), set by strategy
+        self._content_sizes = {}
+
         self._ttls = {}
         self._last_req_times = {}
         self._extra_cache_size_ratio = extra_cache_size_ratio
@@ -181,6 +212,7 @@ class TtlCache(Cache):
         :param kwargs: Dictionary of keyword arguments.
         :return: True if the requested content is in the cache, false otherwise.
         """
+        logging.info(f"TtlCache get - get_action")
         cache_info = self._cache_infos.get(content, None)
         remaining_ttl = cache_info.expiration_time - self._current_time if cache_info else 0.
         hit = True if cache_info else False
@@ -192,8 +224,20 @@ class TtlCache(Cache):
         truncated = False
         info = self.get_info(content)
         action = IcarusActualEnv.get_action(obs, reward, terminated, truncated, info)
-        ttl = action[0][0]
-        cache_size = action[1][0]
+        #print('action', action)
+        if action is None:
+            return True
+        
+        # Handle different action formats (scalar vs array)
+        if isinstance(action[0], (np.ndarray, list)):
+            ttl = action[0][0]
+        else:
+            ttl = action[0]  # Direct scalar value
+            
+        if isinstance(action[1], (np.ndarray, list)):
+            cache_size = action[1][0]
+        else:
+            cache_size = action[1]  # Direct scalar value
         self._ttls[content] = ttl
         self._last_req_times[content] = self._current_time
         self.set_cache_size(int(cache_size * (1. + self._extra_cache_size_ratio)))
@@ -214,45 +258,66 @@ class TtlCache(Cache):
 
         return True
 
-    def put(self, content: int, *args, **kwargs) -> Union[int, None]:
+    def put(self, content: int, *args, **kwargs) -> Union[int, None, list]:
         """Inserts a content into the cache if it does not existed in the cache. If the content is already stored in
         the cache, it will not be inserted again, but, the internal state of the cache object may change.
 
         :param content: Content ID.
         :param args: List of arguments.
         :param kwargs: Dictionary of keyword arguments.
-        :return: The evicted object if a content is evicted. None otherwise.
+        :return: The evicted object(s) if content is evicted. None otherwise.
+            In size-aware mode, may return a list of evicted content IDs.
         """
         if self.has(content):   # Returns None if the cache already has content.
             return None
+
+        # Look up content size
+        content_size = self._content_sizes.get(content, self._default_size)
 
         # Creates a new CacheInfo object.
         popularity = 1
         ttl = self._ttls[content]
         expiration_time = self._current_time + ttl
-        info = TtlCache.CacheInfo(content, popularity, expiration_time, ttl)
+        info = TtlCache.CacheInfo(content, popularity, expiration_time, ttl, size=content_size)
 
-        evicted = None
+        if self._size_aware:
+            # --- Size-aware eviction: evict until enough bytes are free ---
+            evicted_list = []
+            while (self._current_bytes + content_size > self._max_bytes
+                   and len(self._min_expiration_pq) > 0):
+                victim = self._min_expiration_pq.pop()
+                self._current_bytes -= victim.size
+                self._cache_infos.pop(victim.content)
+                evicted_list.append(victim.content)
+                del victim
 
-        if len(self) == self._size:    # When the cache is full.
+            if self._current_bytes + content_size > self._max_bytes:
+                # Still not enough space (single item larger than cache)
+                del info
+                return evicted_list if evicted_list else None
 
-            # When the expiration time of new content is less than those of contents in the cache.
-            if (len(self._min_expiration_pq) == 0 or
-                    self._min_expiration_pq.h[0].expiration_time > info.expiration_time):
-                del info   # Discards the new content.
-                return None
-            else:   # Evicts the content that has the smallest expiration time.
-                info_ = self._min_expiration_pq.pop()
-                content_ = info_.content
-                self._cache_infos.pop(content_)
-                del info_
-                evicted = content_
+            self._cache_infos[content] = info
+            self._min_expiration_pq.push(info)
+            self._current_bytes += content_size
+            return evicted_list if evicted_list else None
+        else:
+            # --- Original item-count eviction (backward compatible) ---
+            evicted = None
+            if len(self) == self._size:
+                if (len(self._min_expiration_pq) == 0 or
+                        self._min_expiration_pq.h[0].expiration_time > info.expiration_time):
+                    del info
+                    return None
+                else:
+                    info_ = self._min_expiration_pq.pop()
+                    content_ = info_.content
+                    self._cache_infos.pop(content_)
+                    del info_
+                    evicted = content_
 
-        # Inserts the new CacheInfo object to the internal data structure.
-        self._cache_infos[content] = info
-        self._min_expiration_pq.push(info)
-
-        return evicted
+            self._cache_infos[content] = info
+            self._min_expiration_pq.push(info)
+            return evicted
 
     def remove(self, content: int, *args, **kwargs) -> bool:
         """Removes a content from the cache, if it exists in the cache.
@@ -265,6 +330,8 @@ class TtlCache(Cache):
         info = self._cache_infos.get(content, None)
         if not info:
             return False
+        if self._size_aware:
+            self._current_bytes -= info.size
         self._cache_infos.pop(content)
         self._min_expiration_pq.remove(info)
         del info
@@ -275,6 +342,7 @@ class TtlCache(Cache):
         self._cache_infos.clear()
         while len(self._min_expiration_pq) > 0:
             self._min_expiration_pq.pop()
+        self._current_bytes = 0.0
 
     def update(self, time: float, content: int):
         """Updates the time variable and removes expired contents in the internal data structure.
@@ -285,6 +353,8 @@ class TtlCache(Cache):
         self._current_time = time
         while self._min_expiration_pq.h and self._min_expiration_pq.h[0].expiration_time < time:
             info = self._min_expiration_pq.pop()
+            if self._size_aware:
+                self._current_bytes -= info.size
             content_ = info.content
             del self._cache_infos[content_]
 
@@ -299,22 +369,27 @@ class TtlCache(Cache):
             del self._cache_infos[info.cid]
             del info
 
-    def get_obs(self, content: int, remaining_ttl: float, hit: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+    def get_obs(self, content: int, remaining_ttl: float, hit: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]:
         """Prepares an observation object to be given to the agent.
 
         :param content: Content ID.
         :param remaining_ttl: Remaining TTL.
         :param hit: True if the content is hit in the cache.
-        :return: Tuple that consists of three numpy arrays and one boolean variable. The each of the first three arrays
-        has the value of _current_time, content, and remaining_ttl, respectively. The boolean variable indicates
+        :return: Tuple that consists of five numpy arrays and one boolean variable. The arrays contain
+        _current_time, content, weight, size, and remaining_ttl respectively. The boolean variable indicates
         whether the requested content is hit or not in the cache.
         """
-        # An observation is a tuple that consists of four values: env_time, content, remaining_ttl, and hit. 'env_time'
-        # is the current time of caching simulation. 'content' is the ID of requested content. 'remaining_ttl' is the
-        # remaining time until when the requested is removed. 'hit' becomes 1 when the requested content is hit in the
-        # cache, 0 for the case of cache miss.
+        # An observation is a tuple that consists of six values: env_time, content_id, weight, size, remaining_ttl, and hit. 
+        # 'env_time' is the current time of caching simulation. 'content_id' is the ID of requested content. 
+        # 'weight' is the weight/importance of the content. 'size' is the size of the content.
+        # 'remaining_ttl' is the remaining time until when the requested is removed. 'hit' becomes 1 when the requested 
+        # content is hit in the cache, 0 for the case of cache miss.
+        # Use per-content size if available, otherwise default
+        content_size = self._content_sizes.get(content, self._default_size)
         return (np.array([self._current_time], dtype=np.float64),
                 np.array([content], dtype=np.uint32),
+                np.array([self._default_weight], dtype=np.float64),
+                np.array([content_size], dtype=np.float64),
                 np.array([remaining_ttl], dtype=np.float64),
                 1 if hit else 0)
 
@@ -349,7 +424,9 @@ class TtlCache(Cache):
         """Signals the end of an episode.
         """
         # Meaningless observation and reward.
-        obs = (np.array([0.0], dtype=np.float64), np.array([0], dtype=np.uint32), np.array([0.], dtype=np.float64), 0)
+        obs = (np.array([0.0], dtype=np.float64), np.array([0], dtype=np.uint32), 
+               np.array([0.0], dtype=np.float64), np.array([0.0], dtype=np.float64),
+               np.array([0.0], dtype=np.float64), 0)
         reward = 0.
 
         terminated = True             # Indicates the end of episode.

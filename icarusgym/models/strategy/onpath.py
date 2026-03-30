@@ -7,6 +7,7 @@ strategy classes of Icarus are defined in icarus.models.strategy.onpath module.
 __all__ = ['IcarusGymLce', 'PeriodicUpdateEverywhere', 'PassiveIcarusGymLce']
 
 import copy
+import logging
 import math
 import numpy as np
 
@@ -19,6 +20,8 @@ from icarus.util import inheritdoc, path_links
 from icarusgym.actual_env import IcarusActualEnv
 from icarusgym import DecisionArrayCache, PerNodeAndContentStatsCollector
 from typing import Dict
+
+logger = logging.getLogger(__name__)
 
 
 @register_strategy('ICARUSGYM_LCE')
@@ -38,6 +41,7 @@ class IcarusGymLce(LeaveCopyEverywhere):
         :param stats_interval: Interval of collecting statistics.
         :param kwargs: Dictionary of keyword arguments.
         """
+        logger.info(f"IcarusGymLce __init__")
         super(IcarusGymLce, self).__init__(view, controller)
         self._current_time = 0.
         self._prev_time = 0.
@@ -58,11 +62,25 @@ class IcarusGymLce(LeaveCopyEverywhere):
         """Destructor. Cache policy used with this strategy should have method finish() that signals the end of an
         episode to the agent through method IcarusActualEnv.set_obs_and_reward().
         """
-        cache = list(self.controller.model.cache.values())[0]
-        cache.finish()
+        try:
+            if hasattr(self, 'controller') and self.controller is not None:
+                cache = list(self.controller.model.cache.values())[0]
+                cache.finish()
+        except (AttributeError, IndexError, TypeError):
+            # Ignore errors during cleanup - object may be partially destroyed
+            pass
 
     @inheritdoc(Strategy)
-    def process_event(self, time: float, receiver: int, content: int, log: bool):
+    def process_event(self, time: float, receiver: int, content: int, log: bool, size: float = None, **kwargs):
+        logger.info(f"IcarusGymLce process_event 1")
+
+        # Register content size in all caches so that get_obs() and put()
+        # can use the correct per-content size.
+        if size is not None:
+            for cache in self.controller.model.cache.values():
+                if hasattr(cache, '_content_sizes'):
+                    cache._content_sizes[content] = size
+
         self._update(time, content)     # Updates time-related variables in the network.
 
         # Gets all required data.
@@ -75,18 +93,22 @@ class IcarusGymLce(LeaveCopyEverywhere):
         for u, v in path_links(path):
             self.controller.forward_request_hop(u, v)
             if v != source:
+                logger.info(f"IcarusGymLce process_event get_content {v}")
                 if self.view.has_cache(v) and self.controller.get_content(v):
                     serving_node = v
                     break
             else:   # No cache hits, gets the content from the source.
+                logger.info(f"IcarusGymLce process_event get_content {v}")
                 self.controller.get_content(v)
                 serving_node = v
 
         # Returns the content.
+        logger.info(f"IcarusGymLce process_event serving_node {serving_node}")
         path = list(reversed(self.view.shortest_path(receiver, serving_node)))
         for u, v in path_links(path):
             self.controller.forward_content_hop(u, v)
             if self.view.has_cache(v):
+                logger.info(f"IcarusGymLce process_event put_content {v}")
                 self.controller.put_content(v)  # Inserts the content.
         self.controller.end_session()
 
@@ -96,6 +118,7 @@ class IcarusGymLce(LeaveCopyEverywhere):
         :param time: Current time.
         :param content: Content ID.
         """
+        logger.info(f"IcarusGymLce _update")
         self._prev_time = self._current_time
         self._current_time = time
         if (int(self._current_time / self._stats_interval) - int(self._prev_time / self._stats_interval)) >= 1:
@@ -119,6 +142,7 @@ class PeriodicUpdateEverywhere(Strategy):
             :param view: Network view object.
             :param content_max: Maximum content ID.
             """
+            logger.info(f"PeriodicUpdateEverywhere.PuePerNodeAndContentStatsCollector __init__")
             super(PeriodicUpdateEverywhere.PuePerNodeAndContentStatsCollector, self).__init__(view, content_max)
             self._fetch_req_overheads = np.zeros((content_max + 1,), dtype=np.uint32)
             self._fetch_res_overheads = np.zeros((content_max + 1,), dtype=np.uint32)
@@ -196,6 +220,7 @@ class PeriodicUpdateEverywhere(Strategy):
 
     @inheritdoc(Strategy)
     def process_event(self, time: float, receiver: int, content: int, log: bool):
+        logger.info(f"PeriodicUpdateEverywhere process_event get_action")
         self._current_time = time
 
         # If the decision interval is elapsed from the last decision, updates all caches in the network according to
@@ -332,6 +357,7 @@ class PassiveIcarusGymLce(IcarusGymLce):
 
             :param size: Size of cache.
             """
+            logger.info(f"PassiveIcarusGymLce.PassiveAgentCache __init__")
             Cache.__init__(self, size)
             self._current_time = 0.
             self._node = None
@@ -342,6 +368,7 @@ class PassiveIcarusGymLce(IcarusGymLce):
             :param time: Current time.
             :param content: Content ID.
             """
+            logger.info(f"PassiveIcarusGymLce.PassiveAgentCache update")
             self._current_time = time
 
         def get_obs(self, content: int, hit: bool) -> tuple:
@@ -419,6 +446,7 @@ class PassiveIcarusGymLce(IcarusGymLce):
         :param node: Node ID.
         :return: Transformed cache object.
         """
+        logger.info(f"Transforming cache {cache} to PassiveAgentCache")
         if not isinstance(cache, Cache):
             raise TypeError('cache must be an instance of Cache or its subclasses')
         cache = copy.deepcopy(cache)
@@ -442,6 +470,7 @@ class PassiveIcarusGymLce(IcarusGymLce):
             :param kwargs: Dictionary of keyword arguments.
             :return: True if the requested content is in the cache, false otherwise.
             """
+            logger.info(f"PassiveAgentCache get - get_action")
             hit = c_get(content, *args, **kwargs)
             obs = cache.get_obs(content, hit)
             reward = cache.__class__.get_reward(hit)
