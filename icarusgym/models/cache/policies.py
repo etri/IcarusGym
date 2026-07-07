@@ -244,6 +244,12 @@ class TtlCache(Cache):
 
         if not hit:
             return False
+        # set_cache_size() above may have trimmed the very content that was
+        # just hit (its CacheInfo is no longer in _cache_infos / the pq).
+        # The request still counts as a hit, but there is nothing to reset.
+        cache_info = self._cache_infos.get(content, None)
+        if cache_info is None:
+            return True
         cache_info.popularity = cache_info.popularity + 1   # This means cache hit.
 
         # Updates _cache_infos and _min_expiration_pq if the cache uses reset mode.
@@ -366,7 +372,9 @@ class TtlCache(Cache):
         self._size = int(size)
         while len(self) > self._size:
             info = self._min_expiration_pq.pop()
-            del self._cache_infos[info.cid]
+            if self._size_aware:
+                self._current_bytes -= info.size
+            del self._cache_infos[info.content]
             del info
 
     def get_obs(self, content: int, remaining_ttl: float, hit: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]:
