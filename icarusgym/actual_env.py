@@ -297,26 +297,21 @@ def exec_experiment(topology, workload, netconf, strategy, cache_policy, collect
         else:
             if e.args and 'TerminateGymProxy' in e.args[0]:
                 logger.info('Terminating IcarusGym.')
-                # Normal termination - don't exit with error code
-                logger.info('Releasing lock and setting event...')
+                # Normal termination - don't exit with error code.
+                # EnvProxy is Event-based (no lock); terminate_sync() sets _gym_env_event
+                # to release the gym thread waiting in EnvProxy._sync_gym_env(). The old
+                # release_lock()/set_gym_env_event() names do not exist -> the event was
+                # never set and the gym thread hung after 'Returning results...'.
                 try:
-                    ActualEnv.env_proxy.release_lock()
-                    logger.info('Lock released successfully')
-                except Exception as lock_e:
-                    logger.warning(f'Error releasing lock: {lock_e}')
-                
-                try:
-                    ActualEnv.env_proxy.set_gym_env_event()
-                    logger.info('Event set successfully')
-                except Exception as event_e:
-                    logger.warning(f'Error setting event: {event_e}')
-                
+                    ActualEnv.env_proxy.terminate_sync()
+                    logger.info('gym env event set (terminate_sync)')
+                except Exception as term_e:
+                    logger.warning(f'Error during terminate_sync: {term_e}')
                 logger.info('Returning results...')
                 return collector.results()
             else:
                 logger.error(traceback.format_exc())
-                ActualEnv.env_proxy.release_lock()
-                ActualEnv.env_proxy.set_gym_env_event()
+                ActualEnv.env_proxy.terminate_sync()
                 exit(1)
     
     # Normal completion - call finish() on caches to signal episode end
