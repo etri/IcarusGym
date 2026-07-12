@@ -23,6 +23,15 @@ class TtlCache(GymEnvBase):
         :param kwargs: Dictionary of keyword arguments.
         """
         print("###config",config)
+        # Provide default config if None is passed (e.g., during RLLib environment checks)
+        if config is None:
+            config = {
+                'content_max': 100,
+                'ttl_max': float('inf'),  # Use infinity instead of 100.0
+                'cache_size_max': 30.0,  # Use actual experiment value
+                'config_path': '/dev/null',  # Dummy path
+                'output_path': '/dev/null'   # Dummy path
+            }
         super().__init__(config)
 
     @staticmethod
@@ -33,17 +42,21 @@ class TtlCache(GymEnvBase):
         :return: Observation space.
         """
         config = kwargs
-        content_max = config['content_max']
-        ttl_max = config['ttl_max']
+        if config is None:
+            # Default values when no config is provided (e.g., during RLLib environment checks)
+            content_max = 100
+            ttl_max = float('inf')  # Use infinity instead of 100.0
+        else:
+            content_max = config['content_max']
+            ttl_max = config['ttl_max']
 
-        # An observation is a tuple that consists of four values: env_time, content, remaining_ttl, and hit. 'env_time'
-        # is the current time of caching simulation. 'content' is the ID of requested content. 'remaining_ttl' is the
-        # remaining time until when the requested is removed. 'hit' becomes 1 when the requested content is hit in the
-        # cache, 0 for the case of cache miss.
-        return Tuple((Box(low=0., high=np.inf, shape=(1,), dtype=np.float64),
-                      Box(low=0, high=content_max, shape=(1,), dtype=np.int_),
-                      Box(low=0., high=ttl_max, shape=(1,), dtype=np.float64),
-                      Discrete(2)))
+        # An observation is a flattened numpy array that consists of six values: env_time, content_id, weight, size, remaining_ttl, and hit. 
+        # The GymProxy automatically flattens tuple observations to numpy arrays, so we define the space as a single Box.
+        # 'env_time' is the current time of caching simulation. 'content_id' is the ID of requested content. 
+        # 'weight' is the weight/importance of the content. 'size' is the size of the content.
+        # 'remaining_ttl' is the remaining time until when the requested is removed. 'hit' becomes 1 when the requested 
+        # content is hit in the cache, 0 for the case of cache miss.
+        return Box(low=0., high=np.inf, shape=(6,), dtype=np.float64)
 
     @staticmethod
     def build_action_space(kwargs: Optional[dict] = None) -> Tuple:
@@ -53,8 +66,13 @@ class TtlCache(GymEnvBase):
         :return: Observation space.
         """
         config = kwargs
-        ttl_max = config['ttl_max']
-        cache_size_max = config['cache_size_max']
+        if config is None:
+            # Default values when no config is provided (e.g., during RLLib environment checks)
+            ttl_max = float('inf')  # Use infinity instead of 100.0
+            cache_size_max = 30.0  # Use actual experiment value
+        else:
+            ttl_max = config['ttl_max']
+            cache_size_max = config['cache_size_max']
 
         # An action is a tuple that consists of two values: ttl and cache_size. 'ttl' is the time interval for which
         # the requested content is stored in the cache. 'cache_size' is the size of cache. When the cache size becomes

@@ -39,12 +39,20 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
         ActualEnv.__init__(self, env_proxy)
         config = kwargs.get('kwargs') or kwargs
         print("ACTUAL_ENV config", config)
-        config_file = config.get('config_path') if config else None
+        # Handle nested config structure
+        if 'config' in config:
+            config_file = config['config'].get('config_path')
+        else:
+            config_file = config.get('config_path') if config else None
         if config_file and not os.path.isabs(config_file):
             # Convert relative path to absolute path
             config_file = os.path.abspath(config_file)
         print("CONFIG_PATH", config_file)
-        output = kwargs.get('kwargs', {}).get('output_path') or kwargs.get('output_path')
+        # Handle nested config structure for output path
+        if 'config' in config:
+            output = config['config'].get('output_path')
+        else:
+            output = kwargs.get('kwargs', {}).get('output_path') or kwargs.get('output_path')
         config_override = None
         settings = Settings()
         settings.read_from(config_file)
@@ -92,7 +100,8 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
         # self.experiment_callback(run_scenario(self.settings, experiment, self.seq.assign(), self.n_exp))
         # if self._stop:
         #     self.stop()
-        print("num_steps:", kwargs)
+        #print("num_steps:", kwargs.get('num_steps'))
+        print("!!! run")
         try:
             i = int(self.seq.current() / self.settings.N_REPLICATIONS) % len(self._experiments)
         except Exception as e:
@@ -115,11 +124,20 @@ class IcarusActualEnv(ActualEnv, Orchestrator):
         # print("RUN hello2:", seed_)
         # IcarusActualEnv.set_obs_and_reward(_obs, reward, terminated, truncated, _info)
 
-    def finish(self, **kwargs):
+    def finish(self, kwargs=None, **kw):
         """Finishes an execution of Icarus simulation.
 
         :param kwargs: Dictionary of keyword arguments.
+        :param kw: Additional keyword arguments.
         """
+        if kwargs is None:
+            kwargs = kw
+        
+        # Skip finish if no experiments have actually been completed (early close from RLlib env checking)
+        if self.n_success == 0 and self.n_fail == 0:
+            logger.info('Skipping finish() - no experiments completed yet (likely early close from env checking)')
+            return
+            
         logger.info('END | Planned: %d, Completed: %d, Succeeded: %d, Failed: %d',
                     self.n_exp, self.n_fail + self.n_success, self.n_success, self.n_fail)
         logger.info('Orchestrator finished')
@@ -248,16 +266,28 @@ def exec_experiment(topology, workload, netconf, strategy, cache_policy, collect
     and values are dictionaries of attributes for the collector they refer to.
     :return: A tree with the aggregated simulation results from all collectors.
     """
+    logger.info('exec_experiment started')
     model = NetworkModel(topology, cache_policy, **netconf)
     view = NetworkView(model)
+    logger.info('exec_experiment started 1')
     controller = NetworkController(model)
+    logger.info('exec_experiment started 2')
     collectors_inst = [DATA_COLLECTOR[name](view, **params)
                        for name, params in collectors.items()]
     collector = CollectorProxy(view, collectors_inst)
     controller.attach_collector(collector)
     strategy_name = strategy['name']
+    logger.info('exec_experiment started 3')
     strategy_args = {k: v for k, v in strategy.items() if k != 'name'}
+    print(strategy_args)
+    print(view)
+    print(controller)
+    print("strategy_name", strategy_name)
+    print("STRATEGY ",STRATEGY)
+    print("**strategy_args", strategy_args)
+    logger.info('exec_experiment started 3.5')
     strategy_inst = STRATEGY[strategy_name](view, controller, **strategy_args)
+    logger.info("exec_experiment started 4")
     try:
         for time_, event in workload:
             strategy_inst.process_event(time_, **event)
@@ -267,9 +297,43 @@ def exec_experiment(topology, workload, netconf, strategy, cache_policy, collect
         else:
             if e.args and 'TerminateGymProxy' in e.args[0]:
                 logger.info('Terminating IcarusGym.')
+                # Normal termination - don't exit with error code
+                logger.info('Releasing lock and setting event...')
+                try:
+                    ActualEnv.env_proxy.release_lock()
+                    logger.info('Lock released successfully')
+                except Exception as lock_e:
+                    logger.warning(f'Error releasing lock: {lock_e}')
+                
+                try:
+                    ActualEnv.env_proxy.set_gym_env_event()
+                    logger.info('Event set successfully')
+                except Exception as event_e:
+                    logger.warning(f'Error setting event: {event_e}')
+                
+                logger.info('Returning results...')
+                return collector.results()
             else:
                 logger.error(traceback.format_exc())
-            ActualEnv.env_proxy.release_lock()
-            ActualEnv.env_proxy.set_gym_env_event()
-            exit(1)
+                ActualEnv.env_proxy.release_lock()
+                ActualEnv.env_proxy.set_gym_env_event()
+                exit(1)
+    
+    # Normal completion - call finish() on caches to signal episode end
+    logger.info('Workload completed normally, calling finish on caches')
+    try:
+        # Call finish() on all caches to send termination signal to GymProxy
+        logger.info(f'Number of caches: {len(controller.model.cache)}')
+        for node, cache in controller.model.cache.items():
+            logger.info(f'Checking cache at node {node}, type: {type(cache)}, has finish: {hasattr(cache, "finish")}')
+            if hasattr(cache, 'finish'):
+                logger.info(f'Calling finish() on cache at node {node}')
+                cache.finish()
+            else:
+                logger.info(f'Cache at node {node} does not have finish() method')
+    except Exception as e:
+        logger.warning(f'Error calling finish on caches: {e}')
+        import traceback
+        logger.warning(traceback.format_exc())
+    
     return collector.results()

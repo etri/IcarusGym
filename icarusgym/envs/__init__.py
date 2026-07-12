@@ -13,3 +13,7 @@ from .ttl_cache import TtlCache
 gym.register(id='DecisionArrayCache-v0', entry_point='icarusgym.envs:DecisionArrayCache')
 gym.register(id='PassiveAgentCache-v0', entry_point='icarusgym.envs:PassiveAgentCache')
 gym.register(id='TtlCache-v0', entry_point='icarusgym.envs:TtlCache')
+
+# Add missing environment registrations that experiments are expecting
+gym.register(id='CachingDehghan-v0', entry_point='icarusgym.envs:TtlCache')
+gym.register(id='CachingSelf-v0', entry_point='icarusgym.envs:PassiveAgentCache')

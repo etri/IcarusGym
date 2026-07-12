@@ -32,15 +32,18 @@ class PassiveAgentCache(GymEnvBase):
         :param kwargs: Dictionary of keyword arguments.
         :return: Observation space.
         """
-        config = kwargs['kwargs']
-        content_max = config['content_max']
+        config = kwargs['kwargs'] if kwargs and 'kwargs' in kwargs else None
+        if config is None:
+            # Default values when no config is provided (e.g., during RLLib environment checks)
+            content_max = 100
+        else:
+            content_max = config['content_max']
 
-        # An observation is a tuple that consists of three values: env_time, content, hit. 'env_time' is the current
-        # time of caching simulation. 'content' is the ID of requested content. 'hit' becomes 1 when the requested
-        # content is hit in the cache, 0 for the case of cache miss.
-        return Tuple((Box(low=0., high=np.inf, shape=(1,), dtype=np.float64),
-                      Box(low=0, high=content_max, shape=(1,), dtype=np.uint32),
-                      Discrete(2)))
+        # An observation is a flattened numpy array that consists of three values: env_time, content_id, and hit. 
+        # The GymProxy automatically flattens tuple observations to numpy arrays, so we define the space as a single Box.
+        # 'env_time' is the current time of caching simulation. 'content_id' is the ID of requested content. 
+        # 'hit' becomes 1 when the requested content is hit in the cache, 0 for the case of cache miss.
+        return Box(low=0., high=np.inf, shape=(3,), dtype=np.float64)
 
     @staticmethod
     def build_action_space(kwargs: Optional[dict] = None) -> Discrete:
