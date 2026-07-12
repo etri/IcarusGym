@@ -45,6 +45,27 @@ We present three gym-type environments as usage examples of IcarusGym:
         - M. Dehghan et al., "A utility optimization approach to network cache design," *IEEE/ACM Trans. Netw.*, vol. 27, 
         no. 3, pp. 1013-1027, May 2019 (Earlier version is presented in *IEEE INFOCOM 2016*).
 
+### Running an example
+
+Each example under `examples/` (`ttl_cache`, `passive_agent_cache`, `decision_array_cache`)
+has a `test.py` entry point. Because the scripts use package-qualified imports
+(e.g. `import examples.ttl_cache.config`, `from icarusgym import *`) and do **not** modify
+`sys.path`, run them **from the repository root with the module (`-m`) syntax**, in the
+environment where IcarusGym and its dependencies (Icarus, Gym/Gymnasium, GymProxy) are installed:
+
+    $ cd ~/projects/icarusgym          # the repository root
+    $ python -m examples.ttl_cache.test
+
+The other examples follow the same pattern:
+
+    $ python -m examples.passive_agent_cache.test
+    $ python -m examples.decision_array_cache.test
+
+Note: running `python examples/ttl_cache/test.py` directly fails with `ModuleNotFoundError`,
+because the script's own directory (not the repository root) ends up on `sys.path`. Each
+example reads its parameters from the `config.py` in the same folder and writes its output
+(`result.pickle`) next to the script.
+
 ## Acknowledgement
 
 This work was supported by the Institute of Information and Communications Technology Planning and Evaluation (IITP)
